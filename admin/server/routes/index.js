@@ -92,7 +92,7 @@ module.exports = function IndexRoute (req, res) {
 		keystoneData.imageSteam = keystone.get('imageSteam');
 	}
 
-	ejs.renderFile(templatePath, locals, { delimiter: '%' }, function (err, str) {
+	ejs.renderFile(templatePath, locals, {}, function (err, str) {
 		if (err) {
 			console.error('Could not render Admin UI Index Template:', err);
 			return res.status(500).send(keystone.wrapHTMLError('Error Rendering Admin UI', err.message));
