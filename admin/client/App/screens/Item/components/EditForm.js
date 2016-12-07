@@ -23,7 +23,7 @@ import AltText from './AltText';
 import FooterBar from './FooterBar';
 import InvalidFieldType from '../../../shared/InvalidFieldType';
 
-import { deleteItem } from '../actions';
+import { deleteItem, draftLoaded } from '../actions';
 
 import { upcase } from '../../../../utils/string';
 
@@ -51,6 +51,7 @@ var EditForm = React.createClass({
 	displayName: 'EditForm',
 	propTypes: {
 		data: React.PropTypes.object,
+		draftList: React.PropTypes.object,
 		list: React.PropTypes.object,
 	},
 	getInitialState () {
@@ -58,9 +59,20 @@ var EditForm = React.createClass({
 			values: assign({}, this.props.data.fields),
 			confirmationDialog: null,
 			loading: false,
+			loadingDraft: false,
 			lastValues: null, // used for resetting
 			focusFirstField: true,
+			draft: false,
+			draftLoaded: false,
 		};
+	},
+	componentDidMount () {
+		this.checkDraft();
+	},
+	componentWillReceiveProps (nextProps) {
+		this.setState({
+			values: assign({}, nextProps.data.fields),
+		});
 	},
 	getFieldProps (field) {
 		const props = assign({}, field);
@@ -100,10 +112,19 @@ var EditForm = React.createClass({
 		this.setState({ confirmationDialog });
 	},
 	handleReset () {
-		this.setState({
-			values: assign({}, this.state.lastValues || this.props.data.fields),
-			confirmationDialog: null,
-		});
+
+		// Remove the draft from the server
+		if (this.state.draft && this.props.draftList) {
+			this.props.draftList.deleteItem(this.state.draft, function () {
+
+				// Then update the state
+				this.setState({
+					draft: false,
+					values: assign({}, this.state.lastValues || this.props.data.fields),
+					confirmationDialog: null,
+				});
+			}.bind(this));
+		}
 	},
 	confirmDelete () {
 		const confirmationDialog = (
@@ -129,6 +150,8 @@ var EditForm = React.createClass({
 		this.setState({
 			confirmationDialog: null,
 		});
+
+		return true;
 	},
 	updateItem () {
 		const { data, list } = this.props;
@@ -162,6 +185,80 @@ var EditForm = React.createClass({
 					values: data.fields,
 					loading: false,
 				});
+			}
+		});
+	},
+	checkDraft () {
+		this.props.list.getDraft(this.props.data.id, (err, draftRes) => {
+
+			// No draft?
+			if (!draftRes.hasDraft) {
+				return;
+			}
+
+			this.setState({
+				draft: draftRes.draft,
+			});
+		});
+	},
+	loadDraft () {
+		if (!this.state.draft) {
+			return;
+		}
+
+		this.setState({ loadingDraft: true });
+
+		this.props.draftList.loadItem(this.state.draft, { drilldown: true }, (err, itemData) => {
+			if (!err && itemData) {
+				itemData.id = this.props.data.id;
+				itemData.__parent && delete itemData.__parent;
+
+				this.setState({ loadingDraft: false, draftLoaded: true });
+				this.props.dispatch(draftLoaded(this.state.draft, itemData));
+			} else if (console && console.log) {
+				console.log('Loading Draft Error: ', err, itemData);
+			}
+		});
+	},
+	saveDraft (callback) {
+		if (this.state.loading || this.state.loadingDraft) {
+			return;
+		}
+
+		const { data, list } = this.props;
+		const editForm = this.refs.editForm;
+		const formData = new FormData(editForm);
+
+		// Update the parent of the draft to the current item
+		formData.set('__parent', data.id);
+
+		// Show loading indicator
+		this.setState({ loading: true });
+
+		return list.saveDraft(data.id, formData, (err, data) => {
+			console.log(data.fields);
+			smoothScrollTop();
+			if (err) {
+				this.setState({
+					alerts: {
+						error: err,
+					},
+					loading: false,
+				});
+			} else {
+				this.setState({
+					alerts: {
+						success: {
+							success: 'Draft saved successfully.',
+						},
+					},
+					loading: false,
+					values: data.fields,
+				});
+			}
+
+			if (callback) {
+				callback();
 			}
 		});
 	},
@@ -267,9 +364,36 @@ var EditForm = React.createClass({
 			}
 		}, this);
 	},
+	openPreview () {
+		if (!this.props.list.previewUrl) {
+			return;
+		}
+
+		this.saveDraft(() => {
+			const previewUrl = this.props.list.previewUrl.replace('{id}', this.props.data.id);
+			const confirmationDialog = (
+				<ConfirmationDialog
+					isOpen
+					body={<p>Preview Ready.<br/><br/>Click 'Open in New Tab' to open the preview in a new browser tab</p>}
+					confirmationLabel="Open in New Tab"
+					confirmationType="primary"
+					cancelLabel="Close"
+					onCancel={this.removeConfirmationDialog}
+					onConfirmation={() => this.removeConfirmationDialog() && window.open(previewUrl)}
+				/>
+			);
+			event.preventDefault();
+			this.setState({ confirmationDialog });
+		});
+	},
 	renderFooterBar () {
-		const { loading } = this.state;
+		const { loading, loadingDraft, draftLoaded } = this.state;
 		const loadingButtonText = loading ? 'Saving' : 'Save';
+		const loadingDraftButtonText = loadingDraft ? 'Loading' : (draftLoaded ? 'Reload Draft' : 'Load Draft');
+		const saveDraftButtonText = loading ? 'Saving' : 'Save as Draft';
+		const canLoadDraft = !!this.state.draft;
+		const canSaveDraft = !!this.props.list.draft;
+		const canPreview = !!(this.props.list.draft && this.props.list.previewUrl);
 
 		// Padding must be applied inline so the FooterBar can determine its
 		// innerHeight at runtime. Aphrodite's styling comes later...
@@ -279,21 +403,57 @@ var EditForm = React.createClass({
 				<div style={styles.footerbarInner}>
 					<LoadingButton
 						color="primary"
-						disabled={loading}
+						disabled={loading || loadingDraft}
 						loading={loading}
 						onClick={this.updateItem}
 						data-button="update"
 					>
 						{loadingButtonText}
 					</LoadingButton>
-					<Button disabled={loading} onClick={this.confirmReset} variant="link" color="cancel" data-button="reset">
+					{canLoadDraft && (
+						<LoadingButton
+							color="warning"
+							disabled={loading || loadingDraft}
+							loading={loadingDraft}
+							onClick={this.loadDraft}
+							data-button="update"
+							style={{ marginLeft: '10px' }}
+						>
+							{loadingDraftButtonText}
+						</LoadingButton>
+					)}
+					{canSaveDraft && (
+						<LoadingButton
+							color="primary"
+							disabled={loading || loadingDraft}
+							loading={loading}
+							onClick={() => this.saveDraft()}
+							data-button="update"
+							style={{ marginLeft: '5px' }}
+						>
+							{saveDraftButtonText}
+						</LoadingButton>
+					)}
+					{canPreview && (
+						<LoadingButton
+							color="default"
+							disabled={loading || loadingDraft}
+							loading={loadingDraft}
+							onClick={this.openPreview}
+							data-button="update"
+							style={{ marginLeft: '5px' }}
+						>
+							Preview
+						</LoadingButton>
+					)}
+					<Button disabled={loading || loadingDraft} onClick={this.confirmReset} variant="link" color="cancel" data-button="reset">
 						<ResponsiveText
 							hiddenXS="reset changes"
 							visibleXS="reset"
 						/>
 					</Button>
 					{!this.props.list.nodelete && (
-						<Button disabled={loading} onClick={this.confirmDelete} variant="link" color="delete" style={styles.deleteButton} data-button="delete">
+						<Button disabled={loading || loadingDraft} onClick={this.confirmDelete} variant="link" color="delete" style={styles.deleteButton} data-button="delete">
 							<ResponsiveText
 								hiddenXS={`delete ${this.props.list.singular.toLowerCase()}`}
 								visibleXS="delete"

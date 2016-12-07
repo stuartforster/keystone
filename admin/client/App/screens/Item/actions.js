@@ -1,6 +1,7 @@
 import {
 	SELECT_ITEM,
 	LOAD_DATA,
+	DRAFT_LOADED,
 	DATA_LOADING_SUCCESS,
 	DATA_LOADING_ERROR,
 	DRAG_MOVE_ITEM,
@@ -91,6 +92,14 @@ export function dataLoaded (data) {
 	};
 }
 
+export function draftLoaded (id, data) {
+	return {
+		type: DRAFT_LOADED,
+		id,
+		data,
+	};
+}
+
 export function relationshipDataLoaded (path, data) {
 	return {
 		type: LOAD_RELATIONSHIP_DATA,
@@ -132,7 +141,6 @@ export function deleteItem (id, router) {
 				if (state.lists.page.index && state.lists.page.index > 1) {
 					redirectUrl = `${redirectUrl}?page=${state.lists.page.index}`;
 				}
-				console.log(state, redirectUrl);
 				router.push(redirectUrl);
 			}
 			// TODO Proper error handling

@@ -160,6 +160,7 @@ var ItemView = React.createClass({
 							/>
 							<EditForm
 								list={this.props.currentList}
+								draftList={this.props.draftList}
 								data={this.props.data}
 								dispatch={this.props.dispatch}
 								router={this.context.router}
@@ -179,6 +180,7 @@ module.exports = connect((state) => ({
 	ready: state.item.ready,
 	error: state.item.error,
 	currentList: state.lists.currentList,
+	draftList: state.lists.draftList,
 	relationshipData: state.item.relationshipData,
 	drag: state.item.drag,
 }))(ItemView);
