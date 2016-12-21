@@ -35,7 +35,7 @@ module.exports = function (req, res) {
 					}
 
 					if (!draft) {
-						doUpdate(item, req.body, sendResponse);
+						return doUpdate(item, req.body, sendResponse);
 					}
 
 					// Clone the draft, update the item with the draft database
