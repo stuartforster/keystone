@@ -18,5 +18,37 @@ module.exports = function (req, res) {
 				res.json(req.list.getData(updatedItem));
 			});
 		});
+	};
+
+	req.list.model.findById(req.params.id, function (err, item) {
+		if (err) return res.status(500).json({ error: 'database error', detail: err });
+		if (!item) return res.status(404).json({ error: 'not found', id: req.params.id });
+
+		// Does this list have drafts enabled? If so - is there a draft that needs updating first?
+		if (req.list.DraftModel) {
+			req.list.DraftModel.model.findOne({ __parent: req.params.id })
+				.exec((err, draft) => {
+					if (err) {
+						return res.status(500).json({ error: 'database error', detail: err });
+					}
+
+					if (!draft) {
+						return doUpdate(item, req.body, sendResponse);
+					}
+
+					// Clone the draft, update the item with the draft database
+					// then reupdate with the posted req body
+					var cloned = draft.toObject();
+					delete cloned._id;
+					delete cloned.__v;
+					delete cloned.__rev;
+
+					req.list.model.update({ _id: req.params.id }, cloned, function () {
+						doUpdate(item, req.body, sendResponse);
+					});
+				});
+		} else {
+			doUpdate(item, req.body, sendResponse);
+		}
 	});
 };
