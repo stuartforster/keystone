@@ -1,21 +1,17 @@
-/**
-TODO:
-- Format size of stored file (if present) using bytes package?
-- Display file type icon? (see LocalFileField)
-*/
-
-import Field from '../Field';
 import React, { PropTypes } from 'react';
+import Field from '../Field';
 import { Button, FormField, FormInput, FormNote } from 'elemental';
 import FileChangeMessage from '../../components/FileChangeMessage';
 import HiddenFileInput from '../../components/HiddenFileInput';
+import ImageThumbnail from '../../components/ImageThumbnail';
 
-let uploadInc = 1000;
+// Generates a 5 char suffix, ie, 2hu0m
+const generateSuffix = () => (0 | Math.random() * 9e6).toString(36);
 
-const buildInitialState = (props) => ({
+const buildInitialState = props => ({
 	action: null,
 	removeExisting: false,
-	uploadFieldPath: `File-${props.path}-${++uploadInc}`,
+	uploadFieldPath: `${props.path}-${generateSuffix()}`,
 	userSelectedFile: null,
 });
 
@@ -28,16 +24,16 @@ module.exports = Field.create({
 		path: PropTypes.string.isRequired,
 		value: PropTypes.shape({
 			filename: PropTypes.string,
-			// TODO: these are present but not used in the UI,
-			//       should we start using them?
-			// filetype: PropTypes.string,
-			// originalname: PropTypes.string,
-			// path: PropTypes.string,
-			// size: PropTypes.number,
+		// TODO: these are present but not used in the UI,
+		//       should we start using them?
+		// filetype: PropTypes.string,
+		// originalname: PropTypes.string,
+		// path: PropTypes.string,
+		// size: PropTypes.number,
 		}),
 	},
 	statics: {
-		type: 'File',
+		type: 'ImageSteam',
 		getDefaultValue: () => ({}),
 	},
 	getInitialState () {
@@ -65,8 +61,28 @@ module.exports = Field.create({
 	},
 	getFilename () {
 		return this.state.userSelectedFile
-			? this.state.userSelectedFile.name
-			: this.props.value.filename;
+		? this.state.userSelectedFile.name
+		: this.props.value.filename;
+	},
+
+	getImageSource (height = null) {
+		let mountPath = Keystone.imageSteam && Keystone.imageSteam.mountPath;
+		let src;
+		if (this.hasLocal()) {
+			src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+		} else if (this.hasExisting()) {
+			src = `${mountPath}${this.props.value.path}/${this.props.value.filename}`;
+
+			if (height) {
+				src += `/:/rs=h:${height}`;
+			}
+		}
+
+		return src;
+	},
+
+	hasLocal () {
+		return !!this.state.userSelectedFile;
 	},
 
 	// ==============================
@@ -80,11 +96,11 @@ module.exports = Field.create({
 		const userSelectedFile = event.target.files[0];
 
 		this.setState({
-			userSelectedFile: userSelectedFile,
+			userSelectedFile,
 		});
 	},
 	handleRemove (e) {
-		var state = {};
+		let state = {};
 
 		if (this.state.userSelectedFile) {
 			state = buildInitialState(this.props);
@@ -98,11 +114,11 @@ module.exports = Field.create({
 					state.action = 'delete';
 				}
 			} else {
-				if (e.altKey) {
-					state.action = 'delete';
-				} else {
-					state.action = 'reset';
-				}
+		if (e.altKey) { // eslint-disable-line
+			state.action = 'delete';
+		} else {
+			state.action = 'reset';
+		}
 			}
 		}
 
@@ -116,16 +132,35 @@ module.exports = Field.create({
 	// RENDERERS
 	// ==============================
 
+	renderImagePreview () {
+		let mask;
+		if (this.hasLocal()) mask = 'upload';
+		else if (this.state.removeExisting) mask = 'remove';
+	else if (this.state.loading) mask = 'loading';
+
+		return (
+			<ImageThumbnail
+				component="a"
+				href={this.getImageSource(null)}
+				mask={mask}
+				target="__blank"
+				style={{ float: 'left', marginRight: '1em' }}
+			>
+				<img role="presentation" src={this.getImageSource(72)} style={{ height: 72 }} />
+			</ImageThumbnail>
+		);
+	},
+
 	renderFileNameAndChangeMessage () {
 		const href = this.props.value ? this.props.value.url : undefined;
 		return (
 			<div>
-				{(this.hasFile() && !this.state.removeExisting) ? (
-					<FileChangeMessage href={href} target="_blank">
-						{this.getFilename()}
-					</FileChangeMessage>
-				) : null}
-				{this.renderChangeMessage()}
+			{(this.hasFile() && !this.state.removeExisting) ? (
+				<FileChangeMessage href={href} target="_blank">
+				{this.getFilename()}
+				</FileChangeMessage>
+			) : null}
+			{this.renderChangeMessage()}
 			</div>
 		);
 	},
@@ -133,18 +168,18 @@ module.exports = Field.create({
 		if (this.state.userSelectedFile) {
 			return (
 				<FileChangeMessage type="success">
-					File selected - save to upload
+					Image selected - save to upload
 				</FileChangeMessage>
-			);
+				);
 		} else if (this.state.removeExisting) {
 			return (
 				<FileChangeMessage type="danger">
-					File {this.props.autoCleanup ? 'deleted' : 'removed'} - save to confirm
+					Image {this.props.autoCleanup ? 'deleted' : 'removed'} - save to confirm
 				</FileChangeMessage>
 			);
-		} else {
-			return null;
 		}
+
+		return null;
 	},
 	renderClearButton () {
 		if (this.state.removeExisting) {
@@ -153,27 +188,29 @@ module.exports = Field.create({
 					Undo Remove
 				</Button>
 			);
-		} else {
-			var clearText;
-			if (this.state.userSelectedFile) {
-				clearText = 'Cancel Upload';
-			} else {
-				clearText = (this.props.autoCleanup ? 'Delete File' : 'Remove File');
-			}
-			return (
-				<Button type="link-cancel" onClick={this.handleRemove}>
-					{clearText}
-				</Button>
-			);
 		}
+
+		let clearText;
+		if (this.state.userSelectedFile) {
+			clearText = 'Cancel';
+		} else {
+			clearText = (this.props.autoCleanup ? 'Delete Image' : 'Remove Image');
+		}
+
+		return (
+			<Button type="link-cancel" onClick={this.handleRemove}>
+			{clearText}
+			</Button>
+		);
 	},
 	renderActionInput () {
-		// If the user has selected a file for uploading, we need to point at
-		// the upload field. If the file is being deleted, we submit that.
+	// If the user has selected a file for uploading, we need to point at
+	// the upload field. If the file is being deleted, we submit that.
 		if (this.state.userSelectedFile || this.state.action) {
-			const value = this.state.userSelectedFile
+			const value = this.state.userSelectedFile // eslint-disable-line no-nested-ternary
 				? `upload:${this.state.uploadFieldPath}`
 				: (this.state.action === 'delete' ? 'remove' : '');
+
 			return (
 				<input
 					name={this.getInputName(this.props.path)}
@@ -181,17 +218,17 @@ module.exports = Field.create({
 					value={value}
 				/>
 			);
-		} else {
-			return null;
 		}
+
+		return null;
 	},
 	renderUI () {
 		const buttons = (
 			<div style={this.hasFile() ? { marginTop: '1em' } : null}>
 				<Button onClick={this.triggerFileBrowser}>
-					{this.hasFile() ? 'Change' : 'Upload'} File
+				{this.hasFile() ? 'Change' : 'Upload'} Image
 				</Button>
-				{this.hasFile() && this.renderClearButton()}
+			{this.hasFile() && this.renderClearButton()}
 			</div>
 		);
 
@@ -200,21 +237,22 @@ module.exports = Field.create({
 				<FormField label={this.props.label} htmlFor={this.props.path}>
 					{this.shouldRenderField() ? (
 						<div>
+							{this.hasFile() && this.renderImagePreview()}
 							{this.hasFile() && this.renderFileNameAndChangeMessage()}
 							{buttons}
 							<HiddenFileInput
 								key={this.state.uploadFieldPath}
 								name={this.state.uploadFieldPath}
 								onChange={this.handleFileChange}
-								ref="fileInput"
+								ref="fileInput" // eslint-disable-line react/no-string-refs
 							/>
 							{this.renderActionInput()}
 						</div>
 					) : (
 						<div>
 							{this.hasFile()
-								? this.renderFileNameAndChangeMessage()
-								: <FormInput noedit>no file</FormInput>}
+							? this.renderFileNameAndChangeMessage()
+							: <FormInput noedit>no image</FormInput>}
 						</div>
 					)}
 					{!!this.props.note && <FormNote note={this.props.note} />}
