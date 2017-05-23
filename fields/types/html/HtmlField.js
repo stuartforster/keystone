@@ -81,7 +81,9 @@ module.exports = Field.create({
 	},
 
 	componentDidMount () {
-		this.initWysiwyg();
+		if (evalDependsOn(this.props.dependsOn, this.props.values)) {
+			this.initWysiwyg();
+		}
 	},
 
 	componentWillReceiveProps (nextProps) {
