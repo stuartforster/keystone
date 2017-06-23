@@ -15,14 +15,24 @@ function generateId () {
 	return i++;
 };
 
-const ItemDom = ({ name, id, onRemove, children }) => (
+const ItemDom = ({ name, id, index, max, onRemove, onMoveUp, onMoveDown, children }) => (
 	<div style={{
-		borderTop: '2px solid #eee',
+		borderBottom: '1px solid #f9b26e',
 		paddingTop: 15,
 	}}>
 		{name && <input type="hidden" name={name} value={id}/>}
 		{children}
 		<div style={{ textAlign: 'right', paddingBottom: 10 }}>
+			{ index > 0 && (
+			<Button size="xsmall" color="default" onClick={onMoveUp}>
+				Move Up
+			</Button>
+			)}&nbsp;
+			{ index < max - 1 && (
+			<Button size="xsmall" color="default" onClick={onMoveDown}>
+				Move Down
+			</Button>
+			)}&nbsp;
 			<Button size="xsmall" color="danger" onClick={onRemove}>
 				Remove
 			</Button>
@@ -58,6 +68,18 @@ module.exports = Field.create({
 	removeItem (index) {
 		const { value: oldValue, path, onChange } = this.props;
 		const value = oldValue.slice(0, index).concat(oldValue.slice(index + 1));
+		onChange({ path, value });
+	},
+	handleMoveUp (index) {
+		const { value: oldValue, path, onChange } = this.props;
+		const value = oldValue.slice(0);
+		value.splice(index - 1, 0, value.splice(index, 1)[0])
+		onChange({ path, value });
+	},
+	handleMoveDown (index) {
+		const { value: oldValue, path, onChange } = this.props;
+		const value = oldValue.slice(0);
+		value.splice(index + 1, 0, value.splice(index, 1)[0])
 		onChange({ path, value });
 	},
 	handleFieldChange (index, event) {
@@ -97,20 +119,23 @@ module.exports = Field.create({
 	renderItems () {
 		const { value = [], path } = this.props;
 		const onAdd = this.addItem;
+		const max = value.length;
 		return (
 			<div>
 				{value.map((value, index) => {
 					const { id, _isNew } = value;
 					const name = !_isNew && `${path}[${index}][id]`;
 					const onRemove = e => this.removeItem(index);
+					const onMoveUp = e => this.handleMoveUp(index);
+					const onMoveDown = e => this.handleMoveDown(index);
 
 					return (
-						<ItemDom key={id} {...{ id, name, onRemove }}>
+						<ItemDom key={id} {...{ id, name, onRemove, onMoveUp, onMoveDown, index, max }}>
 							{this.renderFieldsForItem(index, value)}
 						</ItemDom>
 					);
 				})}
-				<GlyphButton color="success" glyph="plus" position="left" onClick={onAdd}>
+				<GlyphButton color="success" glyph="plus" position="left" onClick={onAdd} style={{marginTop: '15px'}}>
 					Add
 				</GlyphButton>
 			</div>
@@ -120,7 +145,6 @@ module.exports = Field.create({
 		const { label, value } = this.props;
 		return (
 			<div className={css(classes.container)}>
-				<h3 data-things="whatever">{label}</h3>
 				{this.shouldRenderField() ? (
 					this.renderItems()
 				) : (
@@ -134,8 +158,7 @@ module.exports = Field.create({
 
 const classes = StyleSheet.create({
 	container: {
-		marginTop: '2em',
-		paddingLeft: '2em',
-		boxShadow: '-3px 0 0 rgba(0, 0, 0, 0.1)',
+		marginTop: '0em',
+		marginBottom: '2em',
 	},
 });

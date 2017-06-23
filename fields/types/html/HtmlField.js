@@ -133,10 +133,12 @@ module.exports = Field.create({
 			toolbar += options.enableImages ? ' uploadimage' : ' | uploadimage';
 		}
 
+		var secondaryToolbar = false;
 		if (options.additionalButtons) {
+			secondaryToolbar = '';
 			var additionalButtons = options.additionalButtons.split(',');
 			for (i = 0; i < additionalButtons.length; i++) {
-				toolbar += (' | ' + additionalButtons[i]);
+				secondaryToolbar += ((secondaryToolbar === '' ? '' : ' | ') + additionalButtons[i]);
 			}
 		}
 		if (options.additionalPlugins) {
@@ -159,6 +161,8 @@ module.exports = Field.create({
 		if (!options.overrideToolbar) {
 			toolbar += ' | code';
 		}
+
+		toolbar = secondaryToolbar ? [ toolbar, secondaryToolbar ] : toolbar;
 
 		var opts = {
 			selector: '#' + this.state.id,

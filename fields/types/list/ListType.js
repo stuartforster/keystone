@@ -187,6 +187,7 @@ list.prototype.updateItem = function (item, data, files, callback) {
 	var values = this.getValueFromData(data);
 	// Don't update the value when it is undefined
 	if (values === undefined) {
+		item.set(field.path, []);
 		return utils.defer(callback);
 	}
 	// Reset the value when null or an empty string is provided
