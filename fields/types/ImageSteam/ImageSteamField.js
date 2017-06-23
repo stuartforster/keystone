@@ -1,6 +1,6 @@
 import React, { PropTypes } from 'react';
 import Field from '../Field';
-import { Button, FormField, FormInput, FormNote } from 'elemental';
+import { Button, FormField, FormInput, FormNote } from '../../../admin/client/App/elemental';
 import FileChangeMessage from '../../components/FileChangeMessage';
 import HiddenFileInput from '../../components/HiddenFileInput';
 import ImageThumbnail from '../../components/ImageThumbnail';
@@ -43,8 +43,8 @@ module.exports = Field.create({
 		return this.props.collapse && !this.hasExisting();
 	},
 	componentWillUpdate (nextProps) {
-	// Show the new filename when it's finished uploading
-		if (this.props.value.filename !== nextProps.value.filename) {
+		// Show the new filename when it's finished uploading
+		if (this.props.value && (this.props.value.filename !== nextProps.value.filename)) {
 			this.setState(buildInitialState(nextProps));
 		}
 	},
@@ -136,7 +136,7 @@ module.exports = Field.create({
 		let mask;
 		if (this.hasLocal()) mask = 'upload';
 		else if (this.state.removeExisting) mask = 'remove';
-	else if (this.state.loading) mask = 'loading';
+	    else if (this.state.loading) mask = 'loading';
 
 		return (
 			<ImageThumbnail
@@ -184,7 +184,7 @@ module.exports = Field.create({
 	renderClearButton () {
 		if (this.state.removeExisting) {
 			return (
-				<Button type="link" onClick={this.undoRemove}>
+				<Button variant="link" onClick={this.undoRemove}>
 					Undo Remove
 				</Button>
 			);
@@ -198,7 +198,7 @@ module.exports = Field.create({
 		}
 
 		return (
-			<Button type="link-cancel" onClick={this.handleRemove}>
+			<Button variant="link" color="cancel" onClick={this.handleRemove}>
 			{clearText}
 			</Button>
 		);
