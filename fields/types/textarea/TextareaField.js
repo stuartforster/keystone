@@ -25,6 +25,8 @@ module.exports = Field.create({
 		const styles = {
 			height: height,
 			...style,
+			lineHeight: '1.5em',
+			padding: '10px',
 		};
 		return (
 			<FormInput
