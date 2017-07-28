@@ -8,7 +8,7 @@ import {
 	Grid,
 	ResponsiveText,
 } from '../../../elemental';
-
+// import { css, StyleSheet } from 'aphrodite/no-important';
 import { Fields } from 'FieldTypes';
 import { fade } from '../../../../utils/color';
 import theme from '../../../../theme';
@@ -60,17 +60,7 @@ var EditForm = React.createClass({
 			loading: false,
 			loadingDraft: false,
 			lastValues: null, // used for resetting
-<<<<<<< HEAD
 			focusFirstField: !this.props.list.nameField && !this.props.list.nameFieldIsFormHeader,
-		};
-	},
-	componentDidMount () {
-		this.__isMounted = true;
-	},
-	componentWillUnmount () {
-		this.__isMounted = false;
-=======
-			focusFirstField: true,
 			draft: false,
 			draftLoaded: false,
 		};
@@ -82,7 +72,9 @@ var EditForm = React.createClass({
 		this.setState({
 			values: assign({}, nextProps.data.fields),
 		});
->>>>>>> 7ed4d8fb... Add ability for models to have a draft/preview state
+	},
+	componentWillUnount () {
+		this.__isMounted = true;
 	},
 	getFieldProps (field) {
 		const props = assign({}, field);
@@ -371,15 +363,11 @@ var EditForm = React.createClass({
 		});
 	},
 	renderFooterBar () {
-<<<<<<< HEAD
+
 		if (this.props.list.noedit && this.props.list.nodelete) {
 			return null;
 		}
-
-		const { loading } = this.state;
-=======
 		const { loading, loadingDraft, draftLoaded } = this.state;
->>>>>>> 7ed4d8fb... Add ability for models to have a draft/preview state
 		const loadingButtonText = loading ? 'Saving' : 'Save';
 		const loadingDraftButtonText = loadingDraft ? 'Loading' : (draftLoaded ? 'Reload Draft' : 'Load Draft');
 		const saveDraftButtonText = loading ? 'Saving' : 'Save as Draft';
@@ -393,29 +381,6 @@ var EditForm = React.createClass({
 		return (
 			<FooterBar style={styles.footerbar}>
 				<div style={styles.footerbarInner}>
-<<<<<<< HEAD
-					{!this.props.list.noedit && (
-						<LoadingButton
-							color="primary"
-							disabled={loading}
-							loading={loading}
-							onClick={this.updateItem}
-							data-button="update"
-						>
-							{loadingButtonText}
-						</LoadingButton>
-					)}
-					{!this.props.list.noedit && (
-						<Button disabled={loading} onClick={this.toggleResetDialog} variant="link" color="cancel" data-button="reset">
-							<ResponsiveText
-								hiddenXS="reset changes"
-								visibleXS="reset"
-							/>
-						</Button>
-					)}
-					{!this.props.list.nodelete && (
-						<Button disabled={loading} onClick={this.toggleDeleteDialog} variant="link" color="delete" style={styles.deleteButton} data-button="delete">
-=======
 					<LoadingButton
 						color="primary"
 						disabled={loading || loadingDraft}
@@ -469,7 +434,6 @@ var EditForm = React.createClass({
 					</Button>
 					{!this.props.list.nodelete && (
 						<Button disabled={loading || loadingDraft} onClick={this.confirmDelete} variant="link" color="delete" style={styles.deleteButton} data-button="delete">
->>>>>>> 7ed4d8fb... Add ability for models to have a draft/preview state
 							<ResponsiveText
 								hiddenXS={`delete ${this.props.list.singular.toLowerCase()}`}
 								visibleXS="delete"
@@ -554,7 +518,7 @@ var EditForm = React.createClass({
 				{(this.state.alerts) ? <AlertMessages alerts={this.state.alerts} /> : null}
 				<Grid.Row>
 					<Grid.Col large="three-quarters">
-						<Form layout="horizontal" component="div">
+						<Form layout="horizontal" className="EditForm" component="div">
 							{this.renderNameField()}
 							{this.renderKeyOrId()}
 							{this.renderFormElements()}
