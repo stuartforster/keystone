@@ -12,6 +12,7 @@ import {
 	FormInput,
 	FormNote,
 } from '../../../admin/client/App/elemental';
+import ImageThumbnail from '../../components/ImageThumbnail';
 import FileChangeMessage from '../../components/FileChangeMessage';
 import HiddenFileInput from '../../components/HiddenFileInput';
 
@@ -66,6 +67,13 @@ module.exports = Field.create({
 
 	hasFile () {
 		return this.hasExisting() || !!this.state.userSelectedFile;
+	},
+	isImage() {
+		const href = this.props.value ? this.props.value.url : undefined;
+		return href && href.match(/\.(jpeg|jpg|gif|png|svg|webp)$/i) != null;
+	},
+	getImageSource() {
+		return this.props.value && this.props.value.url;
 	},
 	hasExisting () {
 		return this.props.value && !!this.props.value.filename;
@@ -122,6 +130,21 @@ module.exports = Field.create({
 	// ==============================
 	// RENDERERS
 	// ==============================
+	renderImagePreview () {
+		const { value } = this.props;
+    const src = this.getImageSource();
+
+		return (
+			<ImageThumbnail
+				component="a"
+				href={src}
+				target="__blank"
+				style={{ float: 'left', marginRight: '1em' }}
+			>
+				<img src={src} style={{ height: 90 }} />
+			</ImageThumbnail>
+		);
+	},
 
 	renderFileNameAndChangeMessage () {
 		const href = this.props.value ? this.props.value.url : undefined;
@@ -194,12 +217,22 @@ module.exports = Field.create({
 	},
 	renderUI () {
 		const { label, note, path } = this.props;
+    const hasFile = this.hasFile();
+    const isImage = this.isImage();
+
 		const buttons = (
-			<div style={this.hasFile() ? { marginTop: '1em' } : null}>
+			<div style={hasFile ? { marginTop: '1em' } : null}>
 				<Button onClick={this.triggerFileBrowser}>
-					{this.hasFile() ? 'Change' : 'Upload'} File
+					{hasFile ? 'Change' : 'Upload'} File
 				</Button>
-				{this.hasFile() && this.renderClearButton()}
+				{hasFile && this.renderClearButton()}
+			</div>
+		);
+
+		const imageContainer = (
+			<div style={isImage ? { marginBottom: '1em' } : null}>
+				{isImage && this.renderImagePreview()}
+				{hasFile && this.renderFileNameAndChangeMessage()}
 			</div>
 		);
 
@@ -208,7 +241,7 @@ module.exports = Field.create({
 				<FormField label={label} htmlFor={path}>
 					{this.shouldRenderField() ? (
 						<div>
-							{this.hasFile() && this.renderFileNameAndChangeMessage()}
+							{imageContainer}
 							{buttons}
 							<HiddenFileInput
 								key={this.state.uploadFieldPath}
@@ -220,7 +253,7 @@ module.exports = Field.create({
 						</div>
 					) : (
 						<div>
-							{this.hasFile()
+							{hasFile
 								? this.renderFileNameAndChangeMessage()
 								: <FormInput noedit>no file</FormInput>}
 						</div>
