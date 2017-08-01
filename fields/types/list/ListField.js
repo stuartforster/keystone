@@ -43,7 +43,7 @@ module.exports = Field.create({
 		value: React.PropTypes.array,
 	},
 	addItem () {
-		const { path, value, onChange } = this.props;
+		const { path, value = [], onChange } = this.props;
 		onChange({
 			path,
 			value: [
@@ -82,7 +82,8 @@ module.exports = Field.create({
 			props.values = value;
 			props.onChange = this.handleFieldChange.bind(this, index);
 			props.mode = 'edit';
-			props.inputNamePrefix = `${this.props.path}[${index}]`;
+      // Set the current prefix to <path of current list> + index.
+      props.inputNamePrefix = `${this.props.inputNamePrefix || this.props.path}[${index}]`;
 			props.key = field.path;
 			// TODO ?
 			// if (props.dependsOn) {
@@ -95,7 +96,9 @@ module.exports = Field.create({
 		}, this);
 	},
 	renderItems () {
-		const { value = [], path } = this.props;
+		const { value = [], path, inputNamePrefix } = this.props;
+    // Initialize inputNamePrefix for this list.    
+    this.props.inputNamePrefix = ((a, b) => a ?`${a}[${b}]`:b)(inputNamePrefix, path);
 		const onAdd = this.addItem;
 		return (
 			<div>
