@@ -4,13 +4,13 @@ module.exports = function (req, res) {
 		return res.apiError(403, 'invalid csrf');
 	}
 
-	var draftsList = req.list.DraftModel;
+	var draftsList = req.list.getDraftModel(req.list);
 
-	draftsList.model.findOne({ __parent: req.params.id }, function (err, item) {
+	draftsList.model.findById(req.params.id, function (err, item) {
 		if (err) return res.status(500).json({ error: 'database error', detail: err });
 
 		const doUpdate = (updateItem) => {
-			draftsList.updateItem(updateItem, req.body, { ignoreNoEdit: true, files: req.files }, function (err) {
+			draftsList.updateItem(updateItem, req.body, { ignoreNoEdit: true, files: req.files || [] }, function (err) {
 				if (err) {
 					var status = err.error === 'validation errors' ? 400 : 500;
 					var error = err.error === 'database error' ? err.detail : err;
@@ -25,20 +25,26 @@ module.exports = function (req, res) {
 			});
 		};
 
-		if (!item) {
+		const cloneIt = () => {
 			// need to clone
 			req.list.model.findById(req.params.id).exec(function (err, original) {
 				if (err || !original) {
 					return res.json({ err, original });
 				}
 
-				var cloned = original.toObject();
+				const cloned = original.toObject();
 				var updateItem = new draftsList.model(cloned);
+
 				updateItem.save(() => doUpdate(updateItem));
 			});
-		} else {
-			// no need to clone, just do updateItem
-			doUpdate(item);
 		};
+
+		if (item) {
+			item.remove(function (err) {
+				cloneIt();
+			});
+		} else {
+			cloneIt();
+		}
 	});
 };

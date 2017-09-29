@@ -1,7 +1,7 @@
 /* eslint-disable react/jsx-no-bind */
 
 import assign from 'object-assign';
-import { css, StyleSheet } from 'aphrodite/no-important';
+import { css } from 'glamor';
 import React from 'react';
 import Field from '../Field';
 import Domify from 'react-domify';
@@ -119,7 +119,7 @@ module.exports = Field.create({
 	},
 	renderItems () {
 		const { value = [], path, inputNamePrefix } = this.props;
-    // Initialize inputNamePrefix for this list.    
+    // Initialize inputNamePrefix for this list.
     this.props.inputNamePrefix = ((a, b) => a ?`${a}[${b}]`:b)(inputNamePrefix, path);
 		const onAdd = this.addItem;
 		const max = value.length;
@@ -159,9 +159,9 @@ module.exports = Field.create({
 	},
 });
 
-const classes = StyleSheet.create({
+const classes = {
 	container: {
 		marginTop: '0em',
 		marginBottom: '2em',
 	},
-});
+};

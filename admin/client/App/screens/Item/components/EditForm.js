@@ -143,6 +143,7 @@ var EditForm = React.createClass({
 
 		list.updateItem(data.id, formData, (err, data) => {
 			smoothScrollTop();
+			this.checkDraft();
 			if (err) {
 				this.setState({
 					alerts: {
@@ -171,7 +172,9 @@ var EditForm = React.createClass({
 
 			// No draft?
 			if (!draftRes.hasDraft) {
-				return;
+				this.setState({
+					draft: false,
+				});
 			}
 
 			this.setState({
@@ -189,7 +192,6 @@ var EditForm = React.createClass({
 		this.props.draftList.loadItem(this.state.draft, { drilldown: true }, (err, itemData) => {
 			if (!err && itemData) {
 				itemData.id = this.props.data.id;
-				itemData.__parent && delete itemData.__parent;
 
 				this.setState({ loadingDraft: false, draftLoaded: true });
 				this.props.dispatch(draftLoaded(this.state.draft, itemData));
@@ -206,9 +208,6 @@ var EditForm = React.createClass({
 		const { data, list } = this.props;
 		const editForm = this.refs.editForm;
 		const formData = new FormData(editForm);
-
-		// Update the parent of the draft to the current item
-		formData.set('__parent', data.id);
 
 		// Show loading indicator
 		this.setState({ loading: true });
@@ -345,20 +344,16 @@ var EditForm = React.createClass({
 		}
 
 		this.saveDraft(() => {
-			const previewUrl = this.props.list.previewUrl.replace('{id}', this.props.data.id);
-			const confirmationDialog = (
-				<ConfirmationDialog
-					isOpen
-					body={<p>Preview Ready.<br/><br/>Click 'Open in New Tab' to open the preview in a new browser tab</p>}
-					confirmationLabel="Open in New Tab"
-					confirmationType="primary"
-					cancelLabel="Close"
-					onCancel={this.removeConfirmationDialog}
-					onConfirmation={() => this.removeConfirmationDialog() && window.open(previewUrl)}
-				/>
-			);
+			const previewUrl = this.props.list.previewUrl
+				.replace('{id}', this.props.data.id)
+				.replace('{lang}', this.state.values.lang)
+			;
+
 			event.preventDefault();
-			this.setState({ confirmationDialog });
+			this.setState({
+				previewUrl: previewUrl,
+				previewDialogIsOpen: true,
+			});
 		});
 	},
 	renderFooterBar () {
@@ -527,6 +522,16 @@ var EditForm = React.createClass({
 					<Grid.Col large="one-quarter"><span /></Grid.Col>
 				</Grid.Row>
 				{this.renderFooterBar()}
+				<ConfirmationDialog
+					isOpen={this.state.previewDialogIsOpen}
+					confirmationLabel="Open in New Tab"
+					confirmationType="primary"
+					cancelLabel="Close"
+					onCancel={() => this.setState({ previewDialogIsOpen: false })}
+					onConfirmation={() => this.removeConfirmationDialog() && window.open(this.state.previewUrl)}
+				>
+					<p>Preview Ready.<br/><br/>Click 'Open in New Tab' to open the preview in a new browser tab</p>
+				</ConfirmationDialog>
 				<ConfirmationDialog
 					confirmationLabel="Reset"
 					isOpen={this.state.resetDialogIsOpen}
